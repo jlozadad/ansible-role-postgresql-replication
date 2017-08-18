@@ -21,10 +21,10 @@ tower2
 tower3
 
 [database]
-db-main postgresrep_role=master
+db-main postgresrep_role=main
 
-[database_slave]
-db-client postgresrep_role=slave
+[database_client]
+db-client postgresrep_role=client
 
 ...
 
@@ -39,20 +39,20 @@ Role Variables
 |-------------------|---------------------|----------------------|
 | `pg_port` | `5432` | PostgreSQL port |
 | `bundle_install` | `False` | Set to `True` if using the Bundle Installer |
-| `postgresrep_role` | `skip` | `master` or `slave`, which determinse which tasks run on the host |
+| `postgresrep_role` | `skip` | `main` or `client`, which determinse which tasks run on the host |
 | `postgresrep_user` | `replicator` | User account that will be created and used for replication. |
 | `postgresrep_password` | `[undefined]` | Password for replication account |
 | `postgresrep_wal_level` | `hot_standby` | WAL level |
 | `postgresrep_max_wal_senders` | `2` | Max number of WAL senders. Don't set this less than two otherwise the initial sync will fail. |
 | `postgresrep_wal_keep_segments` | `100` | Max number of WAL segments |
-| `postgresrep_synchronous_commit` | `local` | Set to `on`, `local`, or `off`. Setting to `on` will cause the master to stop accepting writes in the slave goes down. See [documentation](https://www.postgresql.org/docs/9.1/static/runtime-config-wal.html#GUC-SYNCHRONOUS-COMMIT) |
+| `postgresrep_synchronous_commit` | `local` | Set to `on`, `local`, or `off`. Setting to `on` will cause the main to stop accepting writes in the client goes down. See [documentation](https://www.postgresql.org/docs/9.1/static/runtime-config-wal.html#GUC-SYNCHRONOUS-COMMIT) |
 | `postgresrep_application_name` | `awx` | Application name used for synchronization. |
-| `postgresrep_group_name` | `database_slave` | Name of the group that contains the slave database. |
-| `postgresrep_group_name_master` | `database` | Name of the gorup that contains the master database. |
-| `postgresrep_master_address` | `[default IPv4 of the master]` | If you need something other than the default IPv4 address, for expample, FQDN, define it here. |
-| `postgresrep_slave_address` | `[default IPv4 of the slave` | If you need something other than the default IPv4 address, for expample, FQDN, define it here. |
+| `postgresrep_group_name` | `database_client` | Name of the group that contains the client database. |
+| `postgresrep_group_name_main` | `database` | Name of the gorup that contains the main database. |
+| `postgresrep_main_address` | `[default IPv4 of the main]` | If you need something other than the default IPv4 address, for expample, FQDN, define it here. |
+| `postgresrep_client_address` | `[default IPv4 of the client` | If you need something other than the default IPv4 address, for expample, FQDN, define it here. |
 | `postgresrep_postgres_conf_lines` | `[see defaults/main.yml]` | Lines in `postgres.conf` that are set in order to enable streaming replication. |
-| `postgresrep_pg_hba_conf_lines` | `[see defaults/main.yml]` | Lines to add to `pg_hba.conf` that allow slave to connect to master. |
+| `postgresrep_pg_hba_conf_lines` | `[see defaults/main.yml]` | Lines to add to `pg_hba.conf` that allow client to connect to main. |
 
 
 Dependencies
@@ -73,7 +73,7 @@ ansible-playbook -b -i inventory psql-replication.yml
 
 ```yaml
 - name: Configure PostgreSQL streaming replication
-  hosts: database_slave
+  hosts: database_client
 
   pre_tasks:
     - name: Remove recovery.conf
@@ -125,7 +125,7 @@ ansible-playbook -b -i inventory psql-replication.yml
     - samdoran.postgresql-replication
 ```
 
-This playbook can be run multiple times. Each time, it erases all the data on the slave node and creates a fresh copy of the database from the master.
+This playbook can be run multiple times. Each time, it erases all the data on the client node and creates a fresh copy of the database from the master.
 
 If the primary database node goes now, here is a playbook that can be used to fail over to the secondary node.
 
@@ -155,7 +155,7 @@ If the primary database node goes now, here is a playbook that can be used to fa
       lineinfile:
         dest: /etc/tower/conf.d/postgres.py
         regexp: "^(.*'HOST':)"
-        line: "\\1 '{{ hostvars[groups['database_slave'][0]].ansible_default_ipv4.address }}',"
+        line: "\\1 '{{ hostvars[groups['database_client'][0]].ansible_default_ipv4.address }}',"
         backrefs: yes
       notify: restart tower
 
