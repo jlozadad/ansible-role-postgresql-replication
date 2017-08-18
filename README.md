@@ -12,7 +12,7 @@ Requirements
 
 Ansible Tower installer roles in your `roles_path` as well as the Ansible Tower inventory file.
 
-Add the slave database node to the Ansible Tower inventory file and define `postgresrep_role` for each database host.
+Add the Client database node to the Ansible Tower inventory file and define `postgresrep_role` for each database host.
 
 ```
 [tower]
@@ -21,10 +21,10 @@ tower2
 tower3
 
 [database]
-db-master postgresrep_role=master
+db-main postgresrep_role=master
 
 [database_slave]
-db-slave postgresrep_role=slave
+db-client postgresrep_role=slave
 
 ...
 
@@ -67,7 +67,7 @@ Example Playbook
 Install this role alongside the roles used by the Anisble Tower installer (bundled or standalone). Then run the example playbook.
 
 ```
-ansible-galaxy install samdoran.postgresql-replication -p roles
+ansible-galaxy install 
 ansible-playbook -b -i inventory psql-replication.yml
 ```
 
@@ -81,7 +81,7 @@ ansible-playbook -b -i inventory psql-replication.yml
         path: /var/lib/pgsql/9.4/data/recovery.conf
         state: absent
 
-    - name: Add slave to database group
+    - name: Add client to database group
       add_host:
         name: "{{ inventory_hostname }}"
         groups: database
@@ -112,14 +112,14 @@ ansible-playbook -b -i inventory psql-replication.yml
       firewalld_https_port: "{{ nginx_https_port }}"
       when: ansible_os_family == 'RedHat'
 
-- name: Configure master server
+- name: Configure main server
   hosts: database[0]
 
   roles:
     - samdoran.postgresql-replication
 
-- name: Configure slave server
-  hosts: database_slave
+- name: Configure clinet server
+  hosts: database_clinet
 
   roles:
     - samdoran.postgresql-replication
@@ -135,7 +135,7 @@ If the primary database node goes now, here is a playbook that can be used to fa
   become: yes
 
 - name: Failover PostgreSQL
-  hosts: database_slave
+  hosts: database_client
   become: yes
 
   tasks:
